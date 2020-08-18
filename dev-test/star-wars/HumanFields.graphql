@@ -1,4 +1,0 @@
-fragment HumanFields on Human {
-  name
-  mass
-}

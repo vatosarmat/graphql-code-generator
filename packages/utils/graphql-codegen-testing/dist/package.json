@@ -1,0 +1,26 @@
+{
+  "name": "@graphql-codegen/testing",
+  "version": "1.17.7",
+  "description": "GraphQL Codegen Testing Utils",
+  "peerDependencies": {
+    "jest-diff": "^23.0.0 || ^24.0.0 || ^25.0.0 || ^26.0.0",
+    "typescript": ">=3.0.0"
+  },
+  "dependencies": {
+    "@graphql-codegen/plugin-helpers": "^1.17.8",
+    "common-tags": "^1.8.0",
+    "lz-string": "^1.4.4",
+    "open": "^7.1.0",
+    "tslib": "~2.0.0"
+  },
+  "repository": "git@github.com:dotansimha/graphql-code-generator.git",
+  "homepage": "https://github.com/dotansimha/graphql-code-generator#readme",
+  "author": "Dotan Simha <dotansimha@gmail.com>",
+  "license": "MIT",
+  "main": "index.cjs.js",
+  "module": "index.esm.js",
+  "typings": "index.d.ts",
+  "typescript": {
+    "definition": "index.d.ts"
+  }
+}
