@@ -56,6 +56,37 @@ describe('ResolversTypes', () => {
     `);
   });
 
+  it('Should build ResolversTypes with simple field mappers', async () => {
+    const result = (await plugin(
+      schema,
+      [],
+      {
+        fieldMappers: {
+          'MyType.foo': 'LazyString',
+          'MyOtherType.bar': 'QueryBuilder',
+        },
+      },
+      { outputFile: '' }
+    )) as Types.ComplexPluginOutput;
+
+    expect(result.content).toBeSimilarStringTo(`
+      export type ResolversTypes = {
+        MyType: ResolverTypeWrapper<Omit<MyType, 'foo'> & { foo: LazyString }>;
+        String: ResolverTypeWrapper<Scalars['String']>;
+        MyOtherType: ResolverTypeWrapper<Omit<MyOtherType, 'bar'> & { bar: QueryBuilder }>;
+        Query: ResolverTypeWrapper<{}>;
+        Subscription: ResolverTypeWrapper<{}>;
+        Node: ResolversTypes['SomeNode'];
+        ID: ResolverTypeWrapper<Scalars['ID']>;
+        SomeNode: ResolverTypeWrapper<SomeNode>;
+        MyUnion: ResolversTypes['MyType'] | ResolversTypes['MyOtherType'];
+        MyScalar: ResolverTypeWrapper<Scalars['MyScalar']>;
+        Int: ResolverTypeWrapper<Scalars['Int']>;
+        Boolean: ResolverTypeWrapper<Scalars['Boolean']>;
+      };
+    `);
+  });
+
   it('Should allow to map custom type that refers itself (issue #1770)', async () => {
     const testSchema = buildSchema(/* GraphQL */ `
       type Movie {
@@ -328,6 +359,37 @@ describe('ResolversTypes', () => {
     expect(result.content).toBeSimilarStringTo(`
     export type ResolversTypes = {
       MyType: ResolverTypeWrapper<CustomPartial<MyType>>;
+      String: ResolverTypeWrapper<Scalars['String']>;
+      MyOtherType: ResolverTypeWrapper<MyOtherType>;
+      Query: ResolverTypeWrapper<{}>;
+      Subscription: ResolverTypeWrapper<{}>;
+      Node: ResolversTypes['SomeNode'];
+      ID: ResolverTypeWrapper<Scalars['ID']>;
+      SomeNode: ResolverTypeWrapper<SomeNode>;
+      MyUnion: ResolversTypes['MyType'] | ResolversTypes['MyOtherType'];
+      MyScalar: ResolverTypeWrapper<Scalars['MyScalar']>;
+      Int: ResolverTypeWrapper<Scalars['Int']>;
+      Boolean: ResolverTypeWrapper<Scalars['Boolean']>;
+    };`);
+  });
+
+  it('Should build ResolversTypes with field mapper set for concrete type using {T} with external identifier', async () => {
+    const result = (await plugin(
+      schema,
+      [],
+      {
+        noSchemaStitching: true,
+        fieldMappers: {
+          'MyType.foo': './my-wrapper#CustomLazy<{T}>',
+        },
+      },
+      { outputFile: '' }
+    )) as Types.ComplexPluginOutput;
+
+    expect(result.prepend).toContain(`import { CustomLazy } from './my-wrapper';`);
+    expect(result.content).toBeSimilarStringTo(`
+    export type ResolversTypes = {
+      MyType: ResolverTypeWrapper<Omit<MyType, 'foo'> & { foo: CustomLazy<Scalars['String']> }>;
       String: ResolverTypeWrapper<Scalars['String']>;
       MyOtherType: ResolverTypeWrapper<MyOtherType>;
       Query: ResolverTypeWrapper<{}>;
@@ -642,6 +704,43 @@ describe('ResolversTypes', () => {
     );
 
     expect(spy).toHaveBeenCalledWith('Unused mappers: Post');
+    spy.mockRestore();
+  });
+
+  it('should warn about unused field mappers by default', async () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation();
+    const testSchema = buildSchema(/* GraphQL */ `
+      type Query {
+        comments: [Comment!]!
+      }
+
+      type User {
+        id: ID!
+        name: String!
+      }
+
+      type Comment {
+        id: ID!
+        text: String!
+        author: User!
+      }
+    `);
+
+    await plugin(
+      testSchema,
+      [],
+      {
+        noSchemaStitching: true,
+        fieldMappers: {
+          'Comment.foo': 'number',
+        },
+      },
+      {
+        outputFile: 'graphql.ts',
+      }
+    );
+
+    expect(spy).toHaveBeenCalledWith('Unused mappers: Comment.foo');
     spy.mockRestore();
   });
 
