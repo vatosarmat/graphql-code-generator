@@ -406,7 +406,10 @@ export class BaseResolversVisitor<
       return false;
     }
 
-    if (this.config.mappers[type.name]) {
+    if (
+      this.config.mappers[type.name] ||
+      Object.keys(this.config.fieldMappers).some(key => key.startsWith(type.name + '.'))
+    ) {
       return true;
     }
 
@@ -428,7 +431,10 @@ export class BaseResolversVisitor<
             return checkedBefore[fieldType.name];
           }
 
-          if (this.config.mappers[type.name]) {
+          if (
+            this.config.mappers[type.name] ||
+            Object.keys(this.config.fieldMappers).some(key => key.startsWith(type.name + '.'))
+          ) {
             return true;
           }
 
