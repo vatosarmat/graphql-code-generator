@@ -51,6 +51,9 @@ export interface ParsedResolversConfig extends ParsedConfig {
   mappers: {
     [typeName: string]: ParsedMapper;
   };
+  fieldMappers: {
+    [typeName: string]: ParsedMapper;
+  };
   defaultMapper: ParsedMapper | null;
   avoidOptionals: boolean;
   addUnderscoreToArgsType: boolean;
@@ -137,6 +140,12 @@ export interface RawResolversConfig extends RawConfig {
    * ```
    */
   rootValueType?: string;
+
+  /**
+   * @description TODO
+   */
+
+  fieldMappers?: { [typeName: string]: string };
   /**
    * @description Adds a suffix to the imported names to prevent name clashes.
    *
@@ -344,6 +353,7 @@ export class BaseResolversVisitor<
         ? parseMapper(rawConfig.defaultMapper || 'any', 'DefaultMapperType')
         : null,
       mappers: transformMappers(rawConfig.mappers || {}, rawConfig.mapperTypeSuffix),
+      fieldMappers: transformMappers(rawConfig.fieldMappers || {}),
       scalars: buildScalars(_schema, rawConfig.scalars, defaultScalars),
       ...(additionalConfig || {}),
     } as TPluginConfig);
@@ -519,20 +529,43 @@ export class BaseResolversVisitor<
             const field = fields[fieldName];
             const baseType = getBaseType(field.type);
             const isUnion = isUnionType(baseType);
+            const mappedType = this.config.fieldMappers[`${typeName}.${fieldName}`];
 
-            if (!this.config.mappers[baseType.name] && !isUnion && !nestedMapping[baseType.name]) {
+            if (!this.config.mappers[baseType.name] && !isUnion && !nestedMapping[baseType.name] && !mappedType) {
               return null;
             }
 
             const addOptionalSign = !this.config.avoidOptionals && !isNonNullType(field.type);
 
+            let typeToUse: string;
+            if (mappedType) {
+              if (this.config.scalars[baseType.name]) {
+                typeToUse = this._getScalar(baseType.name);
+              } else if (this.config.namespacedImportName) {
+                typeToUse = `${this.config.namespacedImportName}.${baseType.name}`;
+              } else {
+                typeToUse = baseType.name;
+              }
+              this.markMapperAsUsed(`${typeName}.${fieldName}`);
+            } else {
+              typeToUse = getTypeToUse(baseType.name);
+            }
+
+            const typeToUseWithModifiers = wrapTypeWithModifiers(typeToUse, field.type, {
+              wrapOptional: this.applyMaybe,
+              wrapArray: this.wrapWithArray,
+            });
+
+            const replaceWithType = mappedType
+              ? hasPlaceholder(mappedType.type)
+                ? replacePlaceholder(mappedType.type, typeToUseWithModifiers)
+                : mappedType.type
+              : typeToUseWithModifiers;
+
             return {
               addOptionalSign,
               fieldName,
-              replaceWithType: wrapTypeWithModifiers(getTypeToUse(baseType.name), field.type, {
-                wrapOptional: this.applyMaybe,
-                wrapArray: this.wrapWithArray,
-              }),
+              replaceWithType,
             };
           })
           .filter(a => a);
@@ -662,7 +695,9 @@ export class BaseResolversVisitor<
   }
 
   public get unusedMappers() {
-    return Object.keys(this.config.mappers).filter(name => !this._usedMappers[name]);
+    return Object.keys({ ...this.config.mappers, ...this.config.fieldMappers }).filter(
+      name => !this._usedMappers[name]
+    );
   }
 
   public get globalDeclarations(): string[] {
@@ -691,10 +726,9 @@ export class BaseResolversVisitor<
       }
     };
 
-    Object.keys(this.config.mappers)
-      .map(gqlTypeName => ({ gqlType: gqlTypeName, mapper: this.config.mappers[gqlTypeName] }))
-      .filter(({ mapper }) => mapper.isExternal)
-      .forEach(({ mapper }) => {
+    Object.values({ ...this.config.mappers, ...this.config.fieldMappers })
+      .filter(mapper => mapper.isExternal)
+      .forEach(mapper => {
         const externalMapper = mapper as ExternalParsedMapper;
         const identifier = stripMapperTypeInterpolation(externalMapper.import);
         addMapper(externalMapper.source, identifier, externalMapper.default);
