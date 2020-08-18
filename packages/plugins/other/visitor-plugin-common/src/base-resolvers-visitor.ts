@@ -140,12 +140,6 @@ export interface RawResolversConfig extends RawConfig {
    * ```
    */
   rootValueType?: string;
-
-  /**
-   * @description TODO
-   */
-
-  fieldMappers?: { [typeName: string]: string };
   /**
    * @description Adds a suffix to the imported names to prevent name clashes.
    *
@@ -214,6 +208,21 @@ export interface RawResolversConfig extends RawConfig {
    * ```
    */
   defaultMapper?: string;
+  /**
+   * @description Set custom type for particular field of particular type. Original generated type can be replaced or wrapped
+   *
+   * @exampleMarkdown
+   * ## Custom field types
+   * ```yml
+   * plugins
+   *   config:
+   *     fieldMappers:
+   *       UserConnection.totalCount: ./my-helper-types#Lazy<{T}>
+   *       PostConnection.totalCount: ./my-helper-types#LazyNumber
+   *
+   */
+
+  fieldMappers?: { [typeName: string]: string };
   /**
    * @description This will cause the generator to avoid using optionals (`?`),
    * so all field resolvers must be implemented in order to avoid compilation errors.
