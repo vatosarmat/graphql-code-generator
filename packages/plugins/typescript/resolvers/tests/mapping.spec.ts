@@ -63,7 +63,6 @@ describe('ResolversTypes', () => {
       {
         fieldMappers: {
           'MyType.foo': 'LazyString',
-          'MyOtherType.bar': 'QueryBuilder',
         },
       },
       { outputFile: '' }
@@ -73,7 +72,7 @@ describe('ResolversTypes', () => {
       export type ResolversTypes = {
         MyType: ResolverTypeWrapper<Omit<MyType, 'foo'> & { foo: LazyString }>;
         String: ResolverTypeWrapper<Scalars['String']>;
-        MyOtherType: ResolverTypeWrapper<Omit<MyOtherType, 'bar'> & { bar: QueryBuilder }>;
+        MyOtherType: ResolverTypeWrapper<MyOtherType>;
         Query: ResolverTypeWrapper<{}>;
         Subscription: ResolverTypeWrapper<{}>;
         Node: ResolversTypes['SomeNode'];
@@ -220,6 +219,43 @@ describe('ResolversTypes', () => {
       String: ResolverTypeWrapper<Partial<Scalars['String']>>;
       Program: ResolverTypeWrapper<Partial<GqlProgram>>;
       Boolean: ResolverTypeWrapper<Partial<Scalars['Boolean']>>;
+    };`);
+  });
+
+  it('Should correctly handle fields whose type has mapped fields', async () => {
+    const testSchema = buildSchema(/* GraphQL */ `
+      type PageInfo {
+        hasNextPage: Boolean!
+      }
+
+      type TopicsConnection {
+        pageInfo: PageInfo!
+        edges: [Topic!]!
+      }
+
+      type Topic {
+        id: ID!
+      }
+    `);
+    const result = (await plugin(
+      testSchema,
+      [],
+      {
+        noSchemaStitching: true,
+        fieldMappers: {
+          'PageInfo.hasNextPage': './my-wrapper#CustomLazy<{T}>',
+        },
+      },
+      { outputFile: '' }
+    )) as Types.ComplexPluginOutput;
+
+    expect(result.content).toBeSimilarStringTo(`export type ResolversTypes = {
+      PageInfo: ResolverTypeWrapper<Omit<PageInfo, 'hasNextPage'> & { hasNextPage: CustomLazy<Scalars['Boolean']> }>;
+      Boolean: ResolverTypeWrapper<Scalars['Boolean']>;
+      TopicsConnection: ResolverTypeWrapper<Omit<TopicsConnection, 'pageInfo'> & { pageInfo: ResolversTypes['PageInfo'] }>;
+      Topic: ResolverTypeWrapper<Topic>;
+      ID: ResolverTypeWrapper<Scalars['ID']>;
+      String: ResolverTypeWrapper<Scalars['String']>;
     };`);
   });
 
