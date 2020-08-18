@@ -1,6 +1,6 @@
 {
   "name": "graphql-code-generator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "bin": {
     "vatosarmat-graphql-codegen": "packages/graphql-codegen-cli/dist/bin.js"
   },
