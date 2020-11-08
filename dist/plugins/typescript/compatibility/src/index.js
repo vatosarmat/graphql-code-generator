@@ -1,0 +1,22 @@
+import { concatAST, visit } from 'graphql';
+import { CompatibilityPluginVisitor } from './visitor';
+const REACT_APOLLO_PLUGIN_NAME = 'typescript-react-apollo';
+export const plugin = async (schema, documents, config, additionalData) => {
+    const allAst = concatAST(documents.map(v => v.document));
+    const reactApollo = ((additionalData || {}).allPlugins || []).find(p => Object.keys(p)[0] === REACT_APOLLO_PLUGIN_NAME);
+    const visitor = new CompatibilityPluginVisitor(config, schema, {
+        reactApollo: reactApollo
+            ? {
+                ...(config || {}),
+                ...reactApollo[REACT_APOLLO_PLUGIN_NAME],
+            }
+            : null,
+    });
+    const visitorResult = visit(allAst, {
+        leave: visitor,
+    });
+    const discriminateUnion = `type DiscriminateUnion<T, U> = T extends U ? T : never;\n`;
+    const result = visitorResult.definitions.filter(a => a && typeof a === 'string').join('\n');
+    return result.includes('DiscriminateUnion') ? [discriminateUnion, result].join('\n') : result;
+};
+//# sourceMappingURL=index.js.map
