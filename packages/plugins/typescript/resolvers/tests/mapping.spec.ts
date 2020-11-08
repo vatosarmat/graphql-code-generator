@@ -417,6 +417,7 @@ describe('ResolversTypes', () => {
         noSchemaStitching: true,
         fieldMappers: {
           'MyType.foo': './my-wrapper#CustomLazy<{T}>',
+          'MyType.otherType': './my-wrapper#CustomLazy<{T}>',
         },
       },
       { outputFile: '' }
@@ -425,7 +426,7 @@ describe('ResolversTypes', () => {
     expect(result.prepend).toContain(`import { CustomLazy } from './my-wrapper';`);
     expect(result.content).toBeSimilarStringTo(`
     export type ResolversTypes = {
-      MyType: ResolverTypeWrapper<Omit<MyType, 'foo'> & { foo: CustomLazy<Scalars['String']> }>;
+      MyType: ResolverTypeWrapper<Omit<MyType, 'foo' | 'otherType'> & { foo: CustomLazy<Scalars['String']>, otherType?: CustomLazy<Maybe<ResolversTypes['MyOtherType']>> }>;
       String: ResolverTypeWrapper<Scalars['String']>;
       MyOtherType: ResolverTypeWrapper<MyOtherType>;
       Query: ResolverTypeWrapper<{}>;

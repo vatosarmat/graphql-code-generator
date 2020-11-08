@@ -556,10 +556,8 @@ export class BaseResolversVisitor<
             if (mappedType) {
               if (this.config.scalars[baseType.name]) {
                 typeToUse = this._getScalar(baseType.name);
-              } else if (this.config.namespacedImportName) {
-                typeToUse = `${this.config.namespacedImportName}.${baseType.name}`;
               } else {
-                typeToUse = baseType.name;
+                typeToUse = getTypeToUse(baseType.name);
               }
               this.markMapperAsUsed(`${typeName}.${fieldName}`);
             } else {
