@@ -1,6 +1,10 @@
 {
   "name": "graphql-code-generator",
   "private": true,
+  "version": "5.0.0",
+  "bin": {
+    "vatosarmat-graphql-codegen": "packages/graphql-codegen-cli/dist/bin.js"
+  },
   "scripts": {
     "postinstall": "patch-package",
     "clean": "rimraf node_modules packages/{*,plugins/*/*,presets/*,utils/*}/node_modules",
